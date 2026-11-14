@@ -26,7 +26,7 @@ export default function AboutTabs({
         <div className="flex flex-col items-center text-center gap-2.5 sm:gap-3">
           <div className="relative h-16 sm:h-24 w-20 sm:w-28 flex items-center justify-center">
             <Image
-              src="/image/logo.png"
+              src="/image/logo-transparent.png"
               alt="Logo Cakrawala"
               width={96}
               height={96}

@@ -16,7 +16,7 @@ export default function Footer() {
             <div className="flex items-center gap-3">
               <div className="relative w-11 h-11 sm:w-14 sm:h-14 flex items-center justify-center shrink-0">
                 <Image
-                  src="/image/logo.png"
+                  src="/image/logo-transparent.png"
                   alt="Logo Cakrawala FEB UMJ"
                   width={56}
                   height={56}

@@ -14,6 +14,7 @@ import {
   UsersRound,
   X,
 } from 'lucide-react';
+import { useConfirmDialog } from '@/components/admin/ConfirmDialog';
 
 type Message = { type: 'success' | 'error'; text: string };
 type Resource = 'division' | 'member' | 'program' | 'timeline';
@@ -35,6 +36,7 @@ export default function AboutManager() {
   const [savingEditor, setSavingEditor] = useState(false);
   const [message, setMessage] = useState<Message | null>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
+  const { confirm, dialog } = useConfirmDialog();
 
   const [vision, setVision] = useState('');
   const [mission, setMission] = useState('');
@@ -156,7 +158,21 @@ export default function AboutManager() {
   };
 
   const handleDelete = async (resource: Resource, id: number) => {
-    if (!confirm('Yakin ingin menghapus item ini? Tindakan tidak dapat dibatalkan.')) return;
+    const resourceNames: Record<Resource, string> = {
+      division: 'divisi',
+      member: 'anggota',
+      program: 'program kerja',
+      timeline: 'riwayat organisasi',
+    };
+    const extraMessage = resource === 'division'
+      ? ' Anggota dan program kerja di dalam divisi ini juga akan terhapus.'
+      : '';
+    const confirmed = await confirm({
+      title: `Hapus ${resourceNames[resource]}?`,
+      message: `Data ini akan dihapus permanen dan tidak dapat dipulihkan.${extraMessage}`,
+      confirmLabel: `Ya, hapus ${resourceNames[resource]}`,
+    });
+    if (!confirmed) return;
     try {
       const res = await fetch(`/api/admin/about?action=${resource}&id=${id}`, { method: 'DELETE' });
       const data = await res.json();
@@ -172,6 +188,7 @@ export default function AboutManager() {
 
   return (
     <div className="space-y-8">
+      {dialog}
       {message && (
         <div className={`p-4 rounded-xl flex items-center gap-3 text-sm font-medium ${message.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
           {message.type === 'success' ? <CheckCircle2 className="w-5 h-5 flex-shrink-0" /> : <AlertCircle className="w-5 h-5 flex-shrink-0" />}

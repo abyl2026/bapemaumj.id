@@ -29,11 +29,11 @@ export const metadata: Metadata = {
   keywords: ['BAPEMA', 'Cakrawala', 'UMJ', 'Pers Mahasiswa', 'Jurnalistik', 'Jakarta'],
   icons: {
     icon: [
-      { url: '/image/logo.png', sizes: 'any' },
+      { url: '/image/logo-transparent.png', sizes: 'any' },
       { url: '/icon.png', sizes: 'any' },
     ],
-    shortcut: '/image/logo.png',
-    apple: '/image/logo.png',
+    shortcut: '/image/logo-transparent.png',
+    apple: '/image/logo-transparent.png',
   },
 };
 

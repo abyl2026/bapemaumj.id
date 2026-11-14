@@ -19,6 +19,7 @@ database/*.db-journal
 
 # Temp & build artifacts
 *.tsbuildinfo
+tsconfig.tsbuildinfo
 next-env.d.ts
 .DS_Store
 Thumbs.db

@@ -13,15 +13,16 @@ import {
   X,
   CheckCircle2,
   AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import FileUpload from '@/components/admin/FileUpload';
+import { useConfirmDialog } from '@/components/admin/ConfirmDialog';
 
 interface EventItem {
   id: number;
   title: string;
-  slug: string;
   shortSummary?: string;
-  description: string;
+  description?: string;
   eventDate: string;
   location?: string;
   imageUrl?: string;
@@ -35,6 +36,7 @@ export default function AdminEventsPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [loadingEventId, setLoadingEventId] = useState<number | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Form states
@@ -48,6 +50,7 @@ export default function AdminEventsPage() {
   const [status, setStatus] = useState<'draft' | 'published' | 'completed'>('published');
   const [isFeatured, setIsFeatured] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const { confirm, dialog } = useConfirmDialog();
 
   const fetchEvents = async () => {
     try {
@@ -85,18 +88,34 @@ export default function AdminEventsPage() {
     setShowModal(true);
   };
 
-  const handleOpenEdit = (item: EventItem) => {
-    setEditingId(item.id);
-    setTitle(item.title);
-    setEventDate(item.eventDate ? item.eventDate.substring(0, 10) : '');
-    setLocation(item.location || '');
-    setShortSummary(item.shortSummary || '');
-    setDescription(item.description);
-    setImageUrl(item.imageUrl || '');
-    setImportantLink(item.importantLink || '');
-    setStatus(item.status);
-    setIsFeatured(item.isFeatured === 1);
-    setShowModal(true);
+  const handleOpenEdit = async (item: EventItem) => {
+    setLoadingEventId(item.id);
+    setMessage(null);
+
+    try {
+      const res = await fetch(`/api/admin/events/${item.id}`);
+      const data = await res.json();
+      if (!res.ok || !data.event) {
+        throw new Error(data.message || 'Gagal memuat detail acara.');
+      }
+
+      const event = data.event;
+      setEditingId(event.id);
+      setTitle(event.title);
+      setEventDate(event.eventDate ? event.eventDate.substring(0, 10) : '');
+      setLocation(event.location || '');
+      setShortSummary(event.shortSummary || '');
+      setDescription(event.description);
+      setImageUrl(event.imageUrl || '');
+      setImportantLink(event.importantLink || '');
+      setStatus(event.status);
+      setIsFeatured(event.isFeatured === 1);
+      setShowModal(true);
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.message || 'Gagal memuat detail acara.' });
+    } finally {
+      setLoadingEventId(null);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -134,12 +153,23 @@ export default function AdminEventsPage() {
 
       const data = await res.json();
       if (res.ok) {
+        if (!data.event) {
+          throw new Error('Respons server tidak menyertakan acara yang tersimpan.');
+        }
+        const savedEvent: EventItem = data.event;
+        setEvents((current) => {
+          const updated = editingId
+            ? current.map((event) => event.id === savedEvent.id ? savedEvent : event)
+            : [...current, savedEvent];
+          return updated.sort(
+            (a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime()
+          );
+        });
         setMessage({ type: 'success', text: data.message });
         setShowModal(false);
         resetForm();
-        fetchEvents();
       } else {
-        setMessage({ type: 'error', text: data.error || 'Gagal menyimpan acara' });
+        setMessage({ type: 'error', text: data.message || data.error || 'Gagal menyimpan acara' });
       }
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message || 'Terjadi kesalahan' });
@@ -149,7 +179,13 @@ export default function AdminEventsPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus agenda kegiatan ini?')) return;
+    const event = events.find((item) => item.id === id);
+    const confirmed = await confirm({
+      title: 'Hapus acara?',
+      message: `Acara "${event?.title || 'ini'}" akan dihapus permanen dan tidak dapat dipulihkan.`,
+      confirmLabel: 'Ya, hapus acara',
+    });
+    if (!confirmed) return;
 
     try {
       const res = await fetch(`/api/admin/events/${id}`, {
@@ -158,9 +194,9 @@ export default function AdminEventsPage() {
       const data = await res.json();
       if (res.ok) {
         setMessage({ type: 'success', text: data.message });
-        fetchEvents();
+        setEvents((current) => current.filter((event) => event.id !== id));
       } else {
-        setMessage({ type: 'error', text: data.error || 'Gagal menghapus' });
+        setMessage({ type: 'error', text: data.message || data.error || 'Gagal menghapus' });
       }
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message });
@@ -169,6 +205,7 @@ export default function AdminEventsPage() {
 
   return (
     <div className="space-y-6">
+      {dialog}
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -179,7 +216,8 @@ export default function AdminEventsPage() {
         </div>
         <button
           onClick={handleOpenAdd}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#442013] text-[#F4E7D3] font-semibold text-sm hover:bg-[#6A3822] transition shadow-sm active:scale-95"
+          disabled={loadingEventId !== null}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#442013] text-[#F4E7D3] font-semibold text-sm hover:bg-[#6A3822] transition shadow-sm active:scale-95 disabled:opacity-50"
         >
           <Plus className="w-4 h-4" />
           <span>Tambah Acara Baru</span>
@@ -304,10 +342,11 @@ export default function AdminEventsPage() {
                       <div className="inline-flex items-center gap-2">
                         <button
                           onClick={() => handleOpenEdit(ev)}
+                          disabled={loadingEventId !== null}
                           className="p-1.5 text-stone-500 hover:text-[#6A3822] hover:bg-stone-100 rounded-lg transition"
                           title="Edit Acara"
                         >
-                          <Edit className="w-4 h-4" />
+                          {loadingEventId === ev.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Edit className="w-4 h-4" />}
                         </button>
                         <button
                           onClick={() => handleDelete(ev.id)}

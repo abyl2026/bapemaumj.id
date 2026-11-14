@@ -50,7 +50,7 @@ export default function Navbar() {
         >
           <div className="relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center shrink-0">
             <Image
-              src="/image/logo.png"
+              src="/image/logo-transparent.png"
               alt="Logo Cakrawala FEB UMJ"
               width={42}
               height={42}

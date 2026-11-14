@@ -20,7 +20,6 @@ export async function GET(
   try {
     const article = await prisma.article.findUnique({
       where: { id },
-      include: { creator: { select: { id: true, name: true, email: true } } },
     });
 
     if (!article) {

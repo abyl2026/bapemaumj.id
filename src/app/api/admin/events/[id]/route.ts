@@ -20,7 +20,6 @@ export async function GET(
   try {
     const event = await prisma.event.findUnique({
       where: { id },
-      include: { creator: { select: { id: true, name: true, email: true } } },
     });
 
     if (!event) {

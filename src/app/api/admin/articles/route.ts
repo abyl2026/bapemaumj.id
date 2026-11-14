@@ -21,8 +21,18 @@ export async function GET() {
   try {
     const articles = await prisma.article.findMany({
       orderBy: { createdAt: 'desc' },
-      include: {
-        creator: { select: { id: true, name: true, email: true } },
+      select: {
+        id: true,
+        title: true,
+        excerpt: true,
+        coverImageUrl: true,
+        category: true,
+        authorName: true,
+        importantLink: true,
+        status: true,
+        isTop: true,
+        viewsCount: true,
+        createdAt: true,
       },
     });
     return NextResponse.json({ articles });

@@ -4,6 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { LogOut, User as UserIcon, PanelLeft, PanelLeftClose } from 'lucide-react';
 import { useSidebar } from './SidebarContext';
+import { useConfirmDialog } from './ConfirmDialog';
 
 interface NavbarProps {
   userName?: string;
@@ -13,23 +14,31 @@ interface NavbarProps {
 export default function AdminNavbar({ userName = 'Admin', userRole = 'admin' }: NavbarProps) {
   const router = useRouter();
   const { collapsed, toggleSidebar } = useSidebar();
+  const { confirm, dialog } = useConfirmDialog();
 
   const handleLogout = async () => {
-    if (confirm('Apakah Anda yakin ingin keluar dari panel admin?')) {
+    const confirmed = await confirm({
+      title: 'Keluar dari panel admin?',
+      message: 'Anda perlu masuk kembali untuk mengakses panel admin.',
+      confirmLabel: 'Keluar',
+      variant: 'primary',
+    });
+    if (!confirmed) return;
+
+    try {
       try {
-        try {
-          localStorage.removeItem('cakrawala_user');
-        } catch {}
-        await fetch('/api/auth/logout', { method: 'POST' });
-        router.push('/admin/login');
-        router.refresh();
-      } catch (err) {
-        console.error('Logout error:', err);
-      }
+        localStorage.removeItem('cakrawala_user');
+      } catch {}
+      await fetch('/api/auth/logout', { method: 'POST' });
+      router.push('/admin/login');
+      router.refresh();
+    } catch (err) {
+      console.error('Logout error:', err);
     }
   };
 
   return (
+    <>
     <header className="h-16 shrink-0 bg-white border-b border-[#E5D5C2] px-4 sm:px-8 flex items-center justify-between shadow-sm z-30 gap-4">
       <div className="flex items-center gap-3">
         {/* Toggle drawer button in navbar */}
@@ -76,5 +85,7 @@ export default function AdminNavbar({ userName = 'Admin', userRole = 'admin' }: 
         </button>
       </div>
     </header>
+    {dialog}
+    </>
   );
 }

@@ -25,13 +25,12 @@ import {
   Loader2,
 } from 'lucide-react';
 import FileUpload from '@/components/admin/FileUpload';
+import { useConfirmDialog } from '@/components/admin/ConfirmDialog';
 
 interface ArticleItem {
   id: number;
   title: string;
-  slug: string;
   excerpt?: string;
-  content: string;
   coverImageUrl?: string;
   category: string;
   authorName: string;
@@ -40,7 +39,6 @@ interface ArticleItem {
   isTop: number;
   viewsCount: number;
   createdAt: string;
-  publishedAt?: string;
 }
 
 const CATEGORIES = [
@@ -57,6 +55,7 @@ export default function AdminArticlesPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [loadingArticleId, setLoadingArticleId] = useState<number | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
@@ -73,6 +72,7 @@ export default function AdminArticlesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [uploadingBodyImage, setUploadingBodyImage] = useState(false);
   const contentTextareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const { confirm, dialog, isOpen: isConfirmationOpen } = useConfirmDialog();
 
   const handleUploadBodyImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -117,19 +117,24 @@ export default function AdminArticlesPage() {
     }
   };
 
-  // Esc key to close modal
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape' && showModal) {
-      if (confirm('Tutup form editor artikel? Perubahan yang belum disimpan akan hilang.')) {
-        setShowModal(false);
-      }
-    }
-  }, [showModal]);
+  const handleCloseEditor = useCallback(async () => {
+    if (submitting) return;
+    const confirmed = await confirm({
+      title: 'Tutup editor artikel?',
+      message: 'Perubahan yang belum disimpan akan hilang.',
+      confirmLabel: 'Tutup editor',
+    });
+    if (confirmed) setShowModal(false);
+  }, [confirm, submitting]);
 
   useEffect(() => {
+    if (!showModal) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !isConfirmationOpen) void handleCloseEditor();
+    };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
+  }, [handleCloseEditor, isConfirmationOpen, showModal]);
 
   const fetchArticles = async () => {
     try {
@@ -167,18 +172,34 @@ export default function AdminArticlesPage() {
     setShowModal(true);
   };
 
-  const handleOpenEdit = (art: ArticleItem) => {
-    setEditingId(art.id);
-    setTitle(art.title);
-    setCategory(art.category);
-    setAuthorName(art.authorName);
-    setCoverImageUrl(art.coverImageUrl || '');
-    setExcerpt(art.excerpt || '');
-    setContent(art.content);
-    setImportantLink(art.importantLink || '');
-    setStatus(art.status);
-    setIsTop(art.isTop === 1);
-    setShowModal(true);
+  const handleOpenEdit = async (art: ArticleItem) => {
+    setLoadingArticleId(art.id);
+    setMessage(null);
+
+    try {
+      const res = await fetch(`/api/admin/articles/${art.id}`);
+      const data = await res.json();
+      if (!res.ok || !data.article) {
+        throw new Error(data.message || 'Gagal memuat detail artikel.');
+      }
+
+      const article = data.article;
+      setEditingId(article.id);
+      setTitle(article.title);
+      setCategory(article.category);
+      setAuthorName(article.authorName);
+      setCoverImageUrl(article.coverImageUrl || '');
+      setExcerpt(article.excerpt || '');
+      setContent(article.content);
+      setImportantLink(article.importantLink || '');
+      setStatus(article.status);
+      setIsTop(article.isTop === 1);
+      setShowModal(true);
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.message || 'Gagal memuat detail artikel.' });
+    } finally {
+      setLoadingArticleId(null);
+    }
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
@@ -225,12 +246,23 @@ export default function AdminArticlesPage() {
 
       const data = await res.json();
       if (res.ok) {
+        if (!data.article) {
+          throw new Error('Respons server tidak menyertakan artikel yang tersimpan.');
+        }
+        const savedArticle: ArticleItem = data.article;
+        setArticles((current) => {
+          const updated = current.map((article) => ({
+            ...article,
+            ...(savedArticle.isTop === 1 && article.id !== savedArticle.id ? { isTop: 0 } : {}),
+            ...(article.id === savedArticle.id ? savedArticle : {}),
+          }));
+          return editingId ? updated : [savedArticle, ...updated];
+        });
         setMessage({ type: 'success', text: data.message });
         setShowModal(false);
         resetForm();
-        fetchArticles();
       } else {
-        setMessage({ type: 'error', text: data.error || 'Gagal menyimpan artikel' });
+        setMessage({ type: 'error', text: data.message || data.error || 'Gagal menyimpan artikel' });
       }
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message || 'Terjadi kesalahan sistem' });
@@ -240,7 +272,13 @@ export default function AdminArticlesPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus artikel ini? Tindakan tidak dapat dibatalkan.')) return;
+    const article = articles.find((item) => item.id === id);
+    const confirmed = await confirm({
+      title: 'Hapus artikel?',
+      message: `Artikel "${article?.title || 'ini'}" akan dihapus permanen dan tidak dapat dipulihkan.`,
+      confirmLabel: 'Ya, hapus artikel',
+    });
+    if (!confirmed) return;
 
     try {
       const res = await fetch(`/api/admin/articles/${id}`, {
@@ -249,9 +287,9 @@ export default function AdminArticlesPage() {
       const data = await res.json();
       if (res.ok) {
         setMessage({ type: 'success', text: data.message });
-        fetchArticles();
+        setArticles((current) => current.filter((article) => article.id !== id));
       } else {
-        setMessage({ type: 'error', text: data.error || 'Gagal menghapus artikel' });
+        setMessage({ type: 'error', text: data.message || data.error || 'Gagal menghapus artikel' });
       }
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message });
@@ -260,6 +298,7 @@ export default function AdminArticlesPage() {
 
   return (
     <div className="space-y-6">
+      {dialog}
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -299,7 +338,8 @@ export default function AdminArticlesPage() {
 
           <button
             onClick={handleOpenAdd}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#442013] text-[#F4E7D3] font-semibold text-sm hover:bg-[#6A3822] transition shadow-sm active:scale-95"
+            disabled={loadingArticleId !== null}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#442013] text-[#F4E7D3] font-semibold text-sm hover:bg-[#6A3822] transition shadow-sm active:scale-95 disabled:opacity-50"
           >
             <Plus className="w-4 h-4" />
             <span>Tulis Artikel Baru</span>
@@ -427,11 +467,12 @@ export default function AdminArticlesPage() {
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => handleOpenEdit(art)}
+                      disabled={loadingArticleId !== null}
                       className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[#442013] bg-[#FAF6F0] hover:bg-[#E5D5C2]/40 border border-[#E5D5C2]/60 transition flex items-center gap-1.5"
                       title="Edit Artikel di Fullscreen Editor"
                     >
-                      <Edit className="w-3.5 h-3.5" />
-                      <span>Edit Fullscreen</span>
+                      {loadingArticleId === art.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Edit className="w-3.5 h-3.5" />}
+                      <span>{loadingArticleId === art.id ? 'Memuat...' : 'Edit Fullscreen'}</span>
                     </button>
                     <button
                       onClick={() => handleDelete(art.id)}
@@ -522,10 +563,11 @@ export default function AdminArticlesPage() {
                       <div className="inline-flex items-center gap-2">
                         <button
                           onClick={() => handleOpenEdit(art)}
+                          disabled={loadingArticleId !== null}
                           className="p-1.5 text-stone-500 hover:text-[#6A3822] hover:bg-stone-100 rounded-lg transition"
                           title="Edit Artikel"
                         >
-                          <Edit className="w-4 h-4" />
+                          {loadingArticleId === art.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Edit className="w-4 h-4" />}
                         </button>
                         <button
                           onClick={() => handleDelete(art.id)}
@@ -552,11 +594,8 @@ export default function AdminArticlesPage() {
             <div className="flex items-center gap-4">
               <button
                 type="button"
-                onClick={() => {
-                  if (confirm('Tutup form editor artikel? Perubahan yang belum disimpan akan hilang.')) {
-                    setShowModal(false);
-                  }
-                }}
+                onClick={handleCloseEditor}
+                disabled={submitting}
                 className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-stone-200 text-stone-600 text-xs font-semibold hover:bg-stone-100 hover:text-[#442013] transition"
               >
                 <ArrowLeft className="w-4 h-4" />
@@ -581,8 +620,9 @@ export default function AdminArticlesPage() {
               </div>
               <button
                 type="button"
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 rounded-xl border border-stone-300 text-stone-600 text-xs font-bold hover:bg-stone-50 transition"
+                onClick={handleCloseEditor}
+                disabled={submitting}
+                className="px-4 py-2 rounded-xl border border-stone-300 text-stone-600 text-xs font-bold hover:bg-stone-50 transition disabled:opacity-50"
               >
                 Batal
               </button>

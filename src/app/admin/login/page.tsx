@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Feather, Lock, Mail, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
+import Image from 'next/image';
+import { Lock, Mail, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -47,18 +48,6 @@ export default function AdminLoginPage() {
     }
   };
 
-  const fillMasterAdmin = () => {
-    setEmail('habil@bapemacakrawala.org');
-    setPassword('AdminCakrawala2026!');
-    setErrorMessage('');
-  };
-
-  const fillStaffAdmin = () => {
-    setEmail('redaksi@bapemacakrawala.org');
-    setPassword('Redaksi2026!');
-    setErrorMessage('');
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#442013] via-[#592c1a] to-[#2b140b] flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background Decorative Rings */}
@@ -68,8 +57,15 @@ export default function AdminLoginPage() {
       <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden border border-[#E5D5C2]/40 relative z-10">
         {/* Top Header Card */}
         <div className="bg-[#442013] p-8 text-center text-[#F4E7D3] border-b border-[#6A3822] relative">
-          <div className="w-16 h-16 mx-auto mb-3 rounded-2xl bg-[#6A3822] flex items-center justify-center border-2 border-[#F4E7D3]/40 shadow-inner">
-            <Feather className="w-8 h-8 text-[#F4E7D3]" />
+          <div className="relative w-20 h-20 mx-auto mb-2">
+            <Image
+              src="/image/logo-transparent.png"
+              alt="Logo BAPEMA Cakrawala UMJ"
+              fill
+              sizes="80px"
+              className="object-contain"
+              priority
+            />
           </div>
           <h1 className="text-xl font-bold tracking-wide font-serif text-white">
             PORTAL ADMIN
@@ -143,31 +139,6 @@ export default function AdminLoginPage() {
             </button>
           </form>
 
-          {/* Quick Demo Test Buttons */}
-          <div className="mt-6 pt-5 border-t border-stone-200">
-            <p className="text-[11px] font-semibold text-stone-500 uppercase tracking-wider text-center mb-2.5">
-              Uji Coba Cepat (Akun Seed):
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={fillMasterAdmin}
-                className="py-1.5 px-2 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-[11px] font-semibold transition text-center"
-              >
-                👑 Master Admin (Habil)
-              </button>
-              <button
-                type="button"
-                onClick={fillStaffAdmin}
-                className="py-1.5 px-2 rounded-lg border border-stone-300 bg-stone-50 hover:bg-stone-100 text-stone-700 text-[11px] font-semibold transition text-center"
-              >
-                ✍️ Staf Redaksi
-              </button>
-            </div>
-            <p className="text-[10px] text-stone-400 text-center mt-2">
-              Password default: <code className="bg-stone-100 px-1 py-0.5 rounded">AdminCakrawala2026!</code>
-            </p>
-          </div>
         </div>
       </div>
     </div>

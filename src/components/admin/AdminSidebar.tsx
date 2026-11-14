@@ -13,8 +13,6 @@ import {
   Users,
   ExternalLink,
   ShieldCheck,
-  PanelLeftClose,
-  PanelLeft,
 } from 'lucide-react';
 import { useSidebar } from './SidebarContext';
 
@@ -51,9 +49,9 @@ export default function AdminSidebar({ userRole = 'admin', userName = 'Admin' }:
         collapsed ? 'p-3 justify-center' : 'p-5 justify-between gap-3'
       }`}>
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center border border-[#F4E7D3]/30 shadow-inner overflow-hidden shrink-0 relative p-1">
+          <div className="w-10 h-10 flex items-center justify-center shrink-0 relative">
             <Image
-              src="/image/logo-cakrawala.jpg"
+              src="/image/logo-transparent.png"
               alt="Logo BAPEMA Cakrawala"
               width={40}
               height={40}
@@ -72,19 +70,6 @@ export default function AdminSidebar({ userRole = 'admin', userName = 'Admin' }:
             </div>
           )}
         </div>
-
-        {/* Toggle Drawer Button */}
-        <button
-          type="button"
-          onClick={toggleSidebar}
-          className={`p-1.5 rounded-lg text-[#E5D5C2]/80 hover:text-white hover:bg-[#6A3822] transition ${
-            collapsed ? 'mt-2' : ''
-          }`}
-          title={collapsed ? 'Buka Navbar Samping (Perlebar)' : 'Sembunyikan Navbar ke Samping (Perluas Layar)'}
-          aria-label="Toggle Sidebar"
-        >
-          {collapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
-        </button>
       </div>
 
       {/* Role Pill */}

@@ -14,6 +14,7 @@ import {
   X,
   Trash2,
 } from 'lucide-react';
+import { useConfirmDialog } from '@/components/admin/ConfirmDialog';
 
 interface UserItem {
   id: number;
@@ -37,6 +38,7 @@ export default function AdminUsersPage() {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<'admin' | 'master_admin'>('admin');
   const [submitting, setSubmitting] = useState(false);
+  const { confirm, dialog } = useConfirmDialog();
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -118,9 +120,12 @@ export default function AdminUsersPage() {
   };
 
   const handleDeleteUser = async (userId: number, userName: string) => {
-    if (!confirm(`Apakah Anda yakin ingin menghapus akun "${userName}"? Akun ini tidak akan dapat mengakses panel admin lagi.`)) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: 'Hapus akun admin?',
+      message: `Akun "${userName}" akan dihapus dan tidak dapat mengakses panel admin lagi.`,
+      confirmLabel: 'Ya, hapus akun',
+    });
+    if (!confirmed) return;
 
     try {
       const res = await fetch(`/api/admin/users/${userId}`, {
@@ -153,6 +158,7 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
+      {dialog}
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

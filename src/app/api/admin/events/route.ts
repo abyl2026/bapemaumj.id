@@ -21,10 +21,16 @@ export async function GET() {
   try {
     const events = await prisma.event.findMany({
       orderBy: { eventDate: 'desc' },
-      include: {
-        creator: {
-          select: { id: true, name: true, email: true },
-        },
+      select: {
+        id: true,
+        title: true,
+        shortSummary: true,
+        eventDate: true,
+        location: true,
+        imageUrl: true,
+        importantLink: true,
+        status: true,
+        isFeatured: true,
       },
     });
     return NextResponse.json({ events });
